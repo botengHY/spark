@@ -358,6 +358,20 @@ class SparkContext(config: SparkConf) extends Logging {
     }
   }
 
+  def getNodeDuration(): HashMap[String, Long] = {
+    var tsi=_taskScheduler.asInstanceOf[TaskSchedulerImpl]
+    var maxTaskId=tsi.taskIdToTaskSetManager.keys.max
+    var taskInfos=tsi.taskIdToTaskSetManager(maxTaskId).taskInfos
+    var weightMap=HashMap[String,Long]()
+    for(tid <- taskInfos.keys){
+      var host = taskInfos(tid).host
+      var duration = taskInfos(tid).duration
+      var oldDuration = weightMap.getOrElse(host, 0:Long)
+      weightMap(host) = oldDuration + duration
+    }
+    weightMap
+  }
+
   /** Control our logLevel. This overrides any user-defined log settings.
    * @param logLevel The desired log level as a string.
    * Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN
