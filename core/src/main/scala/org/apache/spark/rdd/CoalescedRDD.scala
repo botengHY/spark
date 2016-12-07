@@ -58,6 +58,7 @@ private[spark] case class CoalescedRDDPartition(
       val parentPreferredLocations = rdd.context.getPreferredLocs(rdd, p.index).map(_.host)
       preferredLocation.exists(parentPreferredLocations.contains)
     }
+    
     if (parents.size == 0) 0.0 else (loc.toDouble / parents.size.toDouble)
   }
 }
@@ -120,6 +121,10 @@ private[spark] class CoalescedRDD[T: ClassTag](
    * @return the machine most preferred by split
    */
   override def getPreferredLocations(partition: Partition): Seq[String] = {
+    logInfo("********************************************************")
+    logInfo("***** getPreferedLocations called in CoalescedRDD.scala")
+    var locs = partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
+    logInfo("*****"+locs)
     partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
   }
 }
@@ -240,6 +245,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
    */
   def setupGroups(targetLen: Int, partitionLocs: PartitionLocations) {
     // deal with empty case, just create targetLen partition groups with no preferred location
+    println("*************************"+targetLen)
     if (partitionLocs.partsWithLocs.isEmpty) {
       (1 to targetLen).foreach(x => groupArr += new PartitionGroup())
       return
@@ -255,6 +261,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     // OR (we have went through either all partitions OR we've rotated expectedCoupons2 - in
     // which case we have likely seen all preferred locations)
     val numPartsToLookAt = math.min(expectedCoupons2, partitionLocs.partsWithLocs.length)
+
     while (numCreated < targetLen && tries < numPartsToLookAt) {
       val (nxt_replica, nxt_part) = partitionLocs.partsWithLocs(tries)
       tries += 1
@@ -266,6 +273,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
         numCreated += 1
       }
     }
+    
     tries = 0
     // if we don't have enough partition groups, create duplicates
     while (numCreated < targetLen) {
@@ -393,6 +401,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     setupGroups(math.min(prev.partitions.length, maxPartitions), partitionLocs)
     // assign partitions (balls) to each group (bins)
     throwBalls(maxPartitions, prev, balanceSlack, partitionLocs)
+    println("partitionLocs"+partitionLocs)
     getPartitions
   }
 }
