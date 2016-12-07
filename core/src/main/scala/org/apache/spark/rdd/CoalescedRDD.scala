@@ -197,7 +197,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     def getAllPrefLocs(prev: RDD[_]): Unit = {
       val tmpPartsWithLocs = mutable.LinkedHashMap[Partition, Seq[String]]()
       // first get the locations for each partition, only do this once since it can be expensive
-      val available_locs = Array("172.31.25.112", "172.31.25.113", "172.31.25.114", "172.31.25.115", "172.31.25.116")
+      val available_locs = Array("172.31.25.113", "172.31.25.113", "172.31.25.114", "172.31.25.115", "172.31.25.116")
       var idx = 1
       var loc_size = available_locs.length
       prev.partitions.foreach(p => {
@@ -255,7 +255,6 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
    */
   def setupGroups(targetLen: Int, partitionLocs: PartitionLocations) {
     // deal with empty case, just create targetLen partition groups with no preferred location
-    println("*************************"+targetLen)
     if (partitionLocs.partsWithLocs.isEmpty) {
       (1 to targetLen).foreach(x => groupArr += new PartitionGroup())
       return
