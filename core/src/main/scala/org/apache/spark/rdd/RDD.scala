@@ -21,6 +21,7 @@ import java.util.Random
 
 import scala.collection.{mutable, Map}
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 import scala.io.Codec
 import scala.language.implicitConversions
 import scala.reflect.{classTag, ClassTag}
@@ -418,6 +419,12 @@ abstract class RDD[T: ClassTag](
     coalesce(numPartitions, shuffle = true)
   }
 
+  def repartitionWithWeight(numPartitions: Int, loc_weight: HashMap[String, Int])(implicit ord: Ordering[T] = null): RDD[T] = withScope {
+    var sumWeight = loc_weight.values.sum
+    logInfo("sumWeight is ********************"+sumWeight)
+    coalesceWithWeight(sumWeight, loc_weight, shuffle = true)
+    coalesce(numPartitions)
+  }
   /**
    * Return a new RDD that is reduced into `numPartitions` partitions.
    *
@@ -464,6 +471,37 @@ abstract class RDD[T: ClassTag](
         partitionCoalescer).values
     } else {
       new CoalescedRDD(this, numPartitions, partitionCoalescer)
+    }
+  }
+
+  def coalesceWithWeight(numPartitions: Int, loc_weight:HashMap[String, Int], shuffle: Boolean = false,
+               partitionCoalescer: Option[PartitionCoalescer] = Option.empty)
+              (implicit ord: Ordering[T] = null)
+      : RDD[T] = withScope {
+    require(numPartitions > 0, s"Number of partitions ($numPartitions) must be positive.")
+    if (shuffle) {
+      /** Distributes elements evenly across output partitions, starting from a random partition. */
+      val distributePartition = (index: Int, items: Iterator[T]) => {
+        var position = (new Random(index)).nextInt(numPartitions)
+        items.map { t =>
+          // Note that the hash code of the key will just be the key itself. The HashPartitioner
+          // will mod it with the number of total partitions.
+          position = position + 1
+          (position, t)
+        }
+      } : Iterator[(Int, T)]
+
+      // include a shuffle step so that our upstream tasks are still distributed
+      new CoalescedRDD(
+        new ShuffledRDD[Int, T, T](mapPartitionsWithIndex(distributePartition),
+        new HashPartitioner(numPartitions)),
+        numPartitions,
+        partitionCoalescer,
+        loc_weight).values
+    } else {
+      logInfo("***************************498 should not reach non-shuffle")
+      new CoalescedRDD(this, numPartitions, partitionCoalescer)
+      
     }
   }
 
