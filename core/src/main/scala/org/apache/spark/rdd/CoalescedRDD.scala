@@ -197,6 +197,16 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     def getAllPrefLocs(prev: RDD[_]): Unit = {
       val tmpPartsWithLocs = mutable.LinkedHashMap[Partition, Seq[String]]()
       // first get the locations for each partition, only do this once since it can be expensive
+      val available_locs = Array("172.31.25.112", "172.31.25.113", "172.31.25.114", "172.31.25.115", "172.31.25.116")
+      var idx = 1
+      var loc_size = available_locs.length
+      prev.partitions.foreach(p => {
+          val locs = Array(available_locs(idx%loc_size))
+          idx = idx+1
+          tmpPartsWithLocs.put(p, locs)
+        }
+      )
+      /*
       prev.partitions.foreach(p => {
           val locs = currPrefLocs(p, prev)
           if (locs.nonEmpty) {
@@ -205,7 +215,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
             partsWithoutLocs += p
           }
         }
-      )
+      )*/
       // convert it into an array of host to partition
       for (x <- 0 to 2) {
         tmpPartsWithLocs.foreach { parts =>
@@ -286,6 +296,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
       numCreated += 1
       if (tries >= partitionLocs.partsWithLocs.length) tries = 0
     }
+
   }
 
   /**
