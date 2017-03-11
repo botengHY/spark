@@ -416,14 +416,15 @@ abstract class RDD[T: ClassTag](
    * which can avoid performing a shuffle.
    */
   def repartition(numPartitions: Int)(implicit ord: Ordering[T] = null): RDD[T] = withScope {
+    println("REPARTITION IS CALLED")
     coalesce(numPartitions, shuffle = true)
   }
 
-  def repartitionWithWeight(numPartitions: Int, loc_weight: HashMap[String, Int])(implicit ord: Ordering[T] = null): RDD[T] = withScope {
-    var sumWeight = loc_weight.values.sum
-    logInfo("sumWeight is ********************"+sumWeight)
-    coalesceWithWeight(sumWeight, loc_weight, shuffle = true)
-    coalesce(numPartitions)
+  def repartitionWithWeight(numPartitions: Int, locWeight: HashMap[String, Int])
+  (implicit ord: Ordering[T] = null): RDD[T] = withScope {
+    println("REPAETITOINWIHTWEIGHT IS CALLED")
+    var sumWeight = locWeight.values.sum
+    coalesceWithWeight(sumWeight, locWeight)
   }
   /**
    * Return a new RDD that is reduced into `numPartitions` partitions.
@@ -474,35 +475,32 @@ abstract class RDD[T: ClassTag](
     }
   }
 
-  def coalesceWithWeight(numPartitions: Int, loc_weight:HashMap[String, Int], shuffle: Boolean = false,
+  def coalesceWithWeight(numPartitions: Int, locWeight:HashMap[String, Int],
                partitionCoalescer: Option[PartitionCoalescer] = Option.empty)
               (implicit ord: Ordering[T] = null)
       : RDD[T] = withScope {
     require(numPartitions > 0, s"Number of partitions ($numPartitions) must be positive.")
-    if (shuffle) {
-      /** Distributes elements evenly across output partitions, starting from a random partition. */
-      val distributePartition = (index: Int, items: Iterator[T]) => {
-        var position = (new Random(index)).nextInt(numPartitions)
-        items.map { t =>
-          // Note that the hash code of the key will just be the key itself. The HashPartitioner
-          // will mod it with the number of total partitions.
-          position = position + 1
-          (position, t)
-        }
-      } : Iterator[(Int, T)]
 
-      // include a shuffle step so that our upstream tasks are still distributed
-      new CoalescedRDD(
-        new ShuffledRDD[Int, T, T](mapPartitionsWithIndex(distributePartition),
-        new HashPartitioner(numPartitions)),
-        numPartitions,
-        partitionCoalescer,
-        loc_weight).values
-    } else {
-      logInfo("***************************498 should not reach non-shuffle")
-      new CoalescedRDD(this, numPartitions, partitionCoalescer)
-      
-    }
+    println("coalesceWithWeight in RDD.scala is called")
+    
+    /** Distributes elements evenly across output partitions, starting from a random partition. */
+    val distributePartition = (index: Int, items: Iterator[T]) => {
+      var position = (new Random(index)).nextInt(numPartitions)
+      items.map { t =>
+        // Note that the hash code of the key will just be the key itself. The HashPartitioner
+        // will mod it with the number of total partitions.
+        position = position + 1
+        (position, t)
+      }
+    } : Iterator[(Int, T)]
+
+    // include a shuffle step so that our upstream tasks are still distributed
+    new CoalescedRDD(
+      new ShuffledRDD[Int, T, T](mapPartitionsWithIndex(distributePartition),
+      new HashPartitioner(numPartitions)),
+      numPartitions,
+      partitionCoalescer,
+      locWeight).values
   }
 
   /**

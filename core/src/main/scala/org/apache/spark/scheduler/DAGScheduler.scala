@@ -319,9 +319,7 @@ class DAGScheduler(
   def createShuffleMapStage(shuffleDep: ShuffleDependency[_, _, _], jobId: Int): ShuffleMapStage = {
     var rdd = shuffleDep.rdd
     val numTasks = rdd.partitions.length
-    logInfo("*********************************"+rdd.partitions.length)
-    rdd = rdd.coalesce(4)
-    logInfo("*********************************"+rdd.partitions.length)
+    
     val parents = getOrCreateParentStages(rdd, jobId)
     val id = nextStageId.getAndIncrement()
     val stage = new ShuffleMapStage(id, rdd, numTasks, parents, jobId, rdd.creationSite, shuffleDep)

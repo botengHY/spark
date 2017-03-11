@@ -100,7 +100,7 @@ private[spark] class CoalescedRDD[T: ClassTag](
       } 
     }
     else{
-      pc.coalesceWithWeight(maxPartitions, prev, loc_weight).zipWithIndex.map {
+      pc.coalesceWithWeight(prev, loc_weight).zipWithIndex.map {
        case (pg, i) =>
           val ids = pg.partitions.map(_.index).toArray
           new CoalescedRDDPartition(i, prev, ids, pg.prefLoc)
@@ -134,13 +134,15 @@ private[spark] class CoalescedRDD[T: ClassTag](
    * @return the machine most preferred by split
    */
   override def getPreferredLocations(partition: Partition): Seq[String] = {
-    logInfo("********************************************************")
-    logInfo("***** getPreferedLocations called in CoalescedRDD.scala")
+    println("%%% getPreferredLocations is called in LINE 142")
+
     var locs = partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
-    logInfo("*****"+locs)
+    println("[getPreferredLocations] loc is: ", locs)
     partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
   }
 }
+
+
 
 /**
  * Coalesce the partitions of a parent RDD (`prev`) into fewer partitions, so that each partition of
@@ -173,7 +175,7 @@ private[spark] class CoalescedRDD[T: ClassTag](
  */
 
 private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
-  extends PartitionCoalescer {
+  extends PartitionCoalescer with Serializable{
   def compare(o1: PartitionGroup, o2: PartitionGroup): Boolean = o1.numPartitions < o2.numPartitions
   def compare(o1: Option[PartitionGroup], o2: Option[PartitionGroup]): Boolean =
     if (o1 == None) false else if (o2 == None) true else compare(o1.get, o2.get)
@@ -186,6 +188,13 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
   // hash used to check whether some machine is already in groupArr
   val groupHash = mutable.Map[String, ArrayBuffer[PartitionGroup]]()
 
+  // hash used to record needed partitions in groupArr
+  val weightHash = mutable.Map[String, Int]()
+
+  // hash used to record location of partition group
+  val groupIndexHash = mutable.Map[String, Int]()
+
+
   // hash used for the first maxPartitions (to avoid duplicates)
   val initialHash = mutable.Set[Partition]()
 
@@ -196,7 +205,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     prev.context.getPreferredLocs(prev, part.index).map(tl => tl.host)
   }
 
-  /*
+  
   class PartitionLocations(prev: RDD[_]) {
 
     // contains all the partitions from the previous RDD that don't have preferred locations
@@ -230,104 +239,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
       }
     }
   }
-  */
-
-  class PartitionLocations(prev: RDD[_], loc_weight:HashMap[String, Int]= null) {
-
-    // contains all the partitions from the previous RDD that don't have preferred locations
-    val partsWithoutLocs = ArrayBuffer[Partition]()
-    // contains all the partitions from the previous RDD that have preferred locations
-    val partsWithLocs = ArrayBuffer[(String, Partition)]()
-
-    getAllPrefLocs(prev, loc_weight)
-
-    // gets all the preferred locations of the previous RDD and splits them into partitions
-    // with preferred locations and ones without
-    def getAllPrefLocs(prev: RDD[_], loc_weight:HashMap[String, Int]): Unit = {
-      val tmpPartsWithLocs = mutable.LinkedHashMap[Partition, Seq[String]]()
-
-      // first get the locations for each partition, only do this once since it can be expensive
-      if(loc_weight != null){
-        var idx = 0:Int
-        loc_weight.foreach(loc_weight_pair=>{
-            var weight = loc_weight_pair._2
-            var loc = Array(loc_weight_pair._1)
-            for(num <- 0 to weight-1){
-              if(idx <= prev.partitions.size){
-                tmpPartsWithLocs.put(prev.partitions(idx), loc)
-                idx = idx + 1
-              }
-            }
-          }
-        )
-      }
-      else{
-        prev.partitions.foreach(p => {
-            val locs = currPrefLocs(p, prev)
-            if (locs.nonEmpty) {
-              tmpPartsWithLocs.put(p, locs)
-            } else {
-              partsWithoutLocs += p
-            }
-          }
-        )
-      }
-      // convert it into an array of host to partition
-      for (x <- 0 to 2) {
-        tmpPartsWithLocs.foreach { parts =>
-          val p = parts._1
-          val locs = parts._2
-          if (locs.size > x) partsWithLocs += ((locs(x), p))
-        }
-      }
-    }
-  }
-
-  /*  
-  class PartitionLocationsWithWeight(prev: RDD[_] ) {
-
-    // contains all the partitions from the previous RDD that don't have preferred locations
-    val partsWithoutLocs = ArrayBuffer[Partition]()
-    // contains all the partitions from the previous RDD that have preferred locations
-    val partsWithLocs = ArrayBuffer[(String, Partition)]()
-
-    getAllPrefLocs(prev)
-
-    // gets all the preferred locations of the previous RDD and splits them into partitions
-    // with preferred locations and ones without
-    def getAllPrefLocs(prev: RDD[_]): Unit = {
-      val tmpPartsWithLocs = mutable.LinkedHashMap[Partition, Seq[String]]()
-      // first get the locations for each partition, only do this once since it can be expensive
-      val available_locs = Array("172.31.25.113", "172.31.25.113", "172.31.25.114", "172.31.25.115", "172.31.25.116")
-      var idx = 1
-      var loc_size = available_locs.length
-      prev.partitions.foreach(p => {
-          val locs = Array(available_locs(idx%loc_size))
-          idx = idx+1
-          tmpPartsWithLocs.put(p, locs)
-        }
-      )
-      /*
-      prev.partitions.foreach(p => {
-          val locs = currPrefLocs(p, prev)
-          if (locs.nonEmpty) {
-            tmpPartsWithLocs.put(p, locs)
-          } else {
-            partsWithoutLocs += p
-          }
-        }
-      )*/
-      // convert it into an array of host to partition
-      for (x <- 0 to 2) {
-        tmpPartsWithLocs.foreach { parts =>
-          val p = parts._1
-          val locs = parts._2
-          if (locs.size > x) partsWithLocs += ((locs(x), p))
-        }
-      }
-    }
-  }
-  */
+  
 
   /**
    * Sorts and gets the least element of the list associated with key in groupHash
@@ -358,10 +270,11 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
   def setupGroups(targetLen: Int, partitionLocs: PartitionLocations) {
     // deal with empty case, just create targetLen partition groups with no preferred location
     if (partitionLocs.partsWithLocs.isEmpty) {
+      println("[setupGroups] partsWithLocs is empty")
       (1 to targetLen).foreach(x => groupArr += new PartitionGroup())
       return
     }
-
+    println("[setupGroups] targetLen is: ", targetLen)
     noLocality = false
     // number of iterations needed to be certain that we've seen most preferred locations
     val expectedCoupons2 = 2 * (math.log(targetLen)*targetLen + targetLen + 0.5).toInt
@@ -372,9 +285,11 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     // OR (we have went through either all partitions OR we've rotated expectedCoupons2 - in
     // which case we have likely seen all preferred locations)
     val numPartsToLookAt = math.min(expectedCoupons2, partitionLocs.partsWithLocs.length)
+    println("[setupGroups] numPartsToLookAt", numPartsToLookAt)
 
     while (numCreated < targetLen && tries < numPartsToLookAt) {
       val (nxt_replica, nxt_part) = partitionLocs.partsWithLocs(tries)
+      println("[setupGroups] nxt_replica", nxt_replica)
       tries += 1
       if (!groupHash.contains(nxt_replica)) {
         val pgroup = new PartitionGroup(Some(nxt_replica))
@@ -398,6 +313,64 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
       if (tries >= partitionLocs.partsWithLocs.length) tries = 0
     }
 
+  }
+
+  /**
+   * Initializes targetLen partition groups, use weightHash to record number of partitions needed
+   * @param targetLen
+   */
+  def setupWeightedGroups(locWeight: HashMap[String, Int]) {
+    var idx = 0
+    locWeight.foreach(x => {
+      var loc = x._1
+      var weight = x._2
+      val pgroup = new PartitionGroup(Some(loc))
+      groupArr += pgroup
+      groupHash.put(loc, ArrayBuffer(pgroup))
+      weightHash.put(loc, weight)
+      groupIndexHash.put(loc, idx)
+      idx += 1
+    })
+    println("setupWeightedGroups called")
+    println("groupArr is: ", groupArr)
+    println("weightHash is: ", weightHash)
+    println("groupIndexHash is: ", groupIndexHash)
+  }
+
+  def fillGroups(prev: RDD[_], locWeight: HashMap[String, Int], partitionLocs:PartitionLocations){
+    var partsWithLocs = partitionLocs.partsWithLocs
+    var partsWithoutLocs = partitionLocs.partsWithoutLocs
+
+    //Assign partsWithLocs
+    var partIter1 = partsWithLocs.iterator
+
+    while(partIter1.hasNext){
+      var (loc, part) = partIter1.next()
+
+      if (!initialHash.contains(part) && weightHash(loc) > 0) {
+        groupArr(groupIndexHash(loc)).partitions += part
+        initialHash += part
+        weightHash(loc) -= 1
+      }
+      else if (!initialHash.contains(part)){
+        partsWithoutLocs += part
+      }
+      partIter1.next()
+    }
+
+    //Assign the rest of partitions to fill each bin
+    var partIter2 = partsWithoutLocs.iterator
+    groupArr.foreach(pgroup => {
+      var loc = pgroup.prefLoc.get
+      while(loc!=None && weightHash(loc)> 0 && partIter2.hasNext){
+        weightHash(loc) -= 1
+        var part = partIter2.next()
+        if (!initialHash.contains(part)) {
+          pgroup.partitions += part
+          initialHash += part
+        }
+      }
+    })
   }
 
   /**
@@ -478,7 +451,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
           }
         }
       }
-
+      println("[throwBalls] groupArr is: ", groupArr)
       // if we didn't get one partitions per group from partitions with preferred locations
       // use partitions without preferred locations
       val partNoLocIter = partitionLocs.partsWithoutLocs.iterator
@@ -513,17 +486,21 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     setupGroups(math.min(prev.partitions.length, maxPartitions), partitionLocs)
     // assign partitions (balls) to each group (bins)
     throwBalls(maxPartitions, prev, balanceSlack, partitionLocs)
-    println("partitionLocs"+partitionLocs)
+    
     getPartitions
   }
 
-  def coalesceWithWeight(maxPartitions: Int, prev: RDD[_], loc_weight:HashMap[String, Int]): Array[PartitionGroup] = {
-    val partitionLocs = new PartitionLocations(prev, loc_weight)
+  def coalesceWithWeight(prev: RDD[_], locWeight:HashMap[String, Int]): Array[PartitionGroup] = {
+    println("coaleseWithWeight in CoalescedRDD called")
+    val partitionLocs = new PartitionLocations(prev)
+
     // setup the groups (bins)
-    setupGroups(math.min(prev.partitions.length, maxPartitions), partitionLocs)
+    setupWeightedGroups(locWeight)
+
     // assign partitions (balls) to each group (bins)
-    throwBalls(maxPartitions, prev, balanceSlack, partitionLocs)
-    println("partitionLocs"+partitionLocs)
+    fillGroups(prev, locWeight, partitionLocs)
+    
     getPartitions
   }
 }
+
