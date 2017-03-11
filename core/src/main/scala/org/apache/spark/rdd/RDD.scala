@@ -416,13 +416,11 @@ abstract class RDD[T: ClassTag](
    * which can avoid performing a shuffle.
    */
   def repartition(numPartitions: Int)(implicit ord: Ordering[T] = null): RDD[T] = withScope {
-    println("REPARTITION IS CALLED")
     coalesce(numPartitions, shuffle = true)
   }
 
   def repartitionWithWeight(numPartitions: Int, locWeight: HashMap[String, Int])
   (implicit ord: Ordering[T] = null): RDD[T] = withScope {
-    println("REPAETITOINWIHTWEIGHT IS CALLED")
     var sumWeight = locWeight.values.sum
     coalesceWithWeight(sumWeight, locWeight)
   }
@@ -481,8 +479,6 @@ abstract class RDD[T: ClassTag](
       : RDD[T] = withScope {
     require(numPartitions > 0, s"Number of partitions ($numPartitions) must be positive.")
 
-    println("coalesceWithWeight in RDD.scala is called")
-    
     /** Distributes elements evenly across output partitions, starting from a random partition. */
     val distributePartition = (index: Int, items: Iterator[T]) => {
       var position = (new Random(index)).nextInt(numPartitions)

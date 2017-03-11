@@ -134,10 +134,6 @@ private[spark] class CoalescedRDD[T: ClassTag](
    * @return the machine most preferred by split
    */
   override def getPreferredLocations(partition: Partition): Seq[String] = {
-    println("%%% getPreferredLocations is called in LINE 142")
-
-    var locs = partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
-    println("[getPreferredLocations] loc is: ", locs)
     partition.asInstanceOf[CoalescedRDDPartition].preferredLocation.toSeq
   }
 }
@@ -270,11 +266,9 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
   def setupGroups(targetLen: Int, partitionLocs: PartitionLocations) {
     // deal with empty case, just create targetLen partition groups with no preferred location
     if (partitionLocs.partsWithLocs.isEmpty) {
-      println("[setupGroups] partsWithLocs is empty")
       (1 to targetLen).foreach(x => groupArr += new PartitionGroup())
       return
     }
-    println("[setupGroups] targetLen is: ", targetLen)
     noLocality = false
     // number of iterations needed to be certain that we've seen most preferred locations
     val expectedCoupons2 = 2 * (math.log(targetLen)*targetLen + targetLen + 0.5).toInt
@@ -285,11 +279,9 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     // OR (we have went through either all partitions OR we've rotated expectedCoupons2 - in
     // which case we have likely seen all preferred locations)
     val numPartsToLookAt = math.min(expectedCoupons2, partitionLocs.partsWithLocs.length)
-    println("[setupGroups] numPartsToLookAt", numPartsToLookAt)
-
+  
     while (numCreated < targetLen && tries < numPartsToLookAt) {
       val (nxt_replica, nxt_part) = partitionLocs.partsWithLocs(tries)
-      println("[setupGroups] nxt_replica", nxt_replica)
       tries += 1
       if (!groupHash.contains(nxt_replica)) {
         val pgroup = new PartitionGroup(Some(nxt_replica))
@@ -312,66 +304,9 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
       numCreated += 1
       if (tries >= partitionLocs.partsWithLocs.length) tries = 0
     }
-
   }
 
-  /**
-   * Initializes targetLen partition groups, use weightHash to record number of partitions needed
-   * @param targetLen
-   */
-  def setupWeightedGroups(locWeight: HashMap[String, Int]) {
-    var idx = 0
-    locWeight.foreach(x => {
-      var loc = x._1
-      var weight = x._2
-      val pgroup = new PartitionGroup(Some(loc))
-      groupArr += pgroup
-      groupHash.put(loc, ArrayBuffer(pgroup))
-      weightHash.put(loc, weight)
-      groupIndexHash.put(loc, idx)
-      idx += 1
-    })
-    println("setupWeightedGroups called")
-    println("groupArr is: ", groupArr)
-    println("weightHash is: ", weightHash)
-    println("groupIndexHash is: ", groupIndexHash)
-  }
-
-  def fillGroups(prev: RDD[_], locWeight: HashMap[String, Int], partitionLocs:PartitionLocations){
-    var partsWithLocs = partitionLocs.partsWithLocs
-    var partsWithoutLocs = partitionLocs.partsWithoutLocs
-
-    //Assign partsWithLocs
-    var partIter1 = partsWithLocs.iterator
-
-    while(partIter1.hasNext){
-      var (loc, part) = partIter1.next()
-
-      if (!initialHash.contains(part) && weightHash(loc) > 0) {
-        groupArr(groupIndexHash(loc)).partitions += part
-        initialHash += part
-        weightHash(loc) -= 1
-      }
-      else if (!initialHash.contains(part)){
-        partsWithoutLocs += part
-      }
-      partIter1.next()
-    }
-
-    //Assign the rest of partitions to fill each bin
-    var partIter2 = partsWithoutLocs.iterator
-    groupArr.foreach(pgroup => {
-      var loc = pgroup.prefLoc.get
-      while(loc!=None && weightHash(loc)> 0 && partIter2.hasNext){
-        weightHash(loc) -= 1
-        var part = partIter2.next()
-        if (!initialHash.contains(part)) {
-          pgroup.partitions += part
-          initialHash += part
-        }
-      }
-    })
-  }
+  
 
   /**
    * Takes a parent RDD partition and decides which of the partition groups to put it in
@@ -451,7 +386,6 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
           }
         }
       }
-      println("[throwBalls] groupArr is: ", groupArr)
       // if we didn't get one partitions per group from partitions with preferred locations
       // use partitions without preferred locations
       val partNoLocIter = partitionLocs.partsWithoutLocs.iterator
@@ -491,7 +425,6 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
   }
 
   def coalesceWithWeight(prev: RDD[_], locWeight:HashMap[String, Int]): Array[PartitionGroup] = {
-    println("coaleseWithWeight in CoalescedRDD called")
     val partitionLocs = new PartitionLocations(prev)
 
     // setup the groups (bins)
@@ -501,6 +434,60 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     fillGroups(prev, locWeight, partitionLocs)
     
     getPartitions
+  }
+
+  /**
+   * Initializes  partition groups, use weightHash to record number of partitions needed
+   * @param locWeight
+   */
+  def setupWeightedGroups(locWeight: HashMap[String, Int]) {
+    var idx = 0
+    locWeight.foreach(x => {
+      var loc = x._1
+      var weight = x._2
+      val pgroup = new PartitionGroup(Some(loc))
+      groupArr += pgroup
+      groupHash.put(loc, ArrayBuffer(pgroup))
+      weightHash.put(loc, weight)
+      groupIndexHash.put(loc, idx)
+      idx += 1
+    })
+  }
+
+  def fillGroups(prev: RDD[_], locWeight: HashMap[String, Int], partitionLocs:PartitionLocations){
+    var partsWithLocs = partitionLocs.partsWithLocs
+    var partsWithoutLocs = partitionLocs.partsWithoutLocs
+
+    //Assign partsWithLocs
+    var partIter1 = partsWithLocs.iterator
+
+    while(partIter1.hasNext){
+      var (loc, part) = partIter1.next()
+
+      if (!initialHash.contains(part) && weightHash(loc) > 0) {
+        groupArr(groupIndexHash(loc)).partitions += part
+        initialHash += part
+        weightHash(loc) -= 1
+      }
+      else if (!initialHash.contains(part)){
+        partsWithoutLocs += part
+      }
+      partIter1.next()
+    }
+
+    //Assign the rest of partitions to fill each bin
+    var partIter2 = partsWithoutLocs.iterator
+    groupArr.foreach(pgroup => {
+      var loc = pgroup.prefLoc.get
+      while(loc!=None && weightHash(loc)> 0 && partIter2.hasNext){
+        weightHash(loc) -= 1
+        var part = partIter2.next()
+        if (!initialHash.contains(part)) {
+          pgroup.partitions += part
+          initialHash += part
+        }
+      }
+    })
   }
 }
 
