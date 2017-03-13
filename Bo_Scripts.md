@@ -35,7 +35,6 @@ ec2-54-173-214-238.compute-1.amazonaws.com
 ec2-54-211-235-198.compute-1.amazonaws.com
 ec2-54-224-117-152.compute-1.amazonaws.com
 ec2-54-234-112-145.compute-1.amazonaws.com
-
 ```
 ### ssh to ec2 instances
 ```
