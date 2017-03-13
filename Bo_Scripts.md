@@ -1,3 +1,5 @@
+#Spark
+
 ### Build spark
 In pathToSpark/spark folder do 
 ```
@@ -18,3 +20,64 @@ $ var part = sc.textFile("two_diamonds_400.txt")
 $ part = part.repartitionWithWeight(4, locWeight)
 $ part.count()
 ```
+
+#AWS EC2
+
+### ec2 public dns
+```
+ec2-52-91-175-30.compute-1.amazonaws.com
+ec2-52-205-171-223.compute-1.amazonaws.com
+ec2-52-207-234-132.compute-1.amazonaws.com
+ec2-54-152-18-243.compute-1.amazonaws.com
+ec2-54-166-109-227.compute-1.amazonaws.com
+ec2-54-166-181-97.compute-1.amazonaws.com
+ec2-54-173-214-238.compute-1.amazonaws.com
+ec2-54-211-235-198.compute-1.amazonaws.com
+ec2-54-224-117-152.compute-1.amazonaws.com
+ec2-54-234-112-145.compute-1.amazonaws.com
+
+```
+### ssh to ec2 instances
+```
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-91-175-30.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-205-171-223.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-207-234-132.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-152-18-243.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-166-109-227.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-166-181-97.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-173-214-238.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-211-235-198.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-224-117-152.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-234-112-145.compute-1.amazonaws.com
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
