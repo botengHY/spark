@@ -52,7 +52,10 @@ ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-234-112-145.compute-1.a
 
 # Setting up EC2 Spark environment
 1. Install java following http://tipsonubuntu.com/2016/07/31/install-oracle-java-8-9-ubuntu-16-04-linux-mint-18/
-2. Install scala following 
+2. Install scala using 
+ ```
+ $sudo apt-get install scala
+ ```
 
 
 
