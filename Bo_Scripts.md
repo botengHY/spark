@@ -56,28 +56,27 @@ ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-234-112-145.compute-1.a
  ```
  $sudo apt-get install scala
  ```
-# Configure ec2 spark cluster 
+
+### Configure ec2 spark cluster 
 First pull from git and build. Configure spark ec2 cluster following http://blog.insightdatalabs.com/spark-cluster-step-by-step/
 
-# Start master using
+### Start master using
 ```
 ~/spark/sbin/start-master.sh
 ```
 
-# Start slave using
+### Start slave using
 ```
 ~/spark/sbin/start-slave.sh spark://ip-172-31-49-67.ec2.internal:7077
 ```
 Where portnumber can be checked in master log file
 
+# Kmeans on spark cluster
 
-
-
-
-
-
-
-
+# Create sparce vector rdd
+```
+val parsedData = data.map(s => Vectors.sparse(102660, s.split(" ").map(x=>(x.split(":")(0).toInt, x.split(":")(1).toDouble)).toList))
+```
 
 
 
