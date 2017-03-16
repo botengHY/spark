@@ -79,6 +79,17 @@ val parsedData = data.map(s => Vectors.sparse(102660, s.split(" ").map(x=>(x.spl
 ```
 
 
+# Run kmeans on ec2 cluster
+```
+import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+import org.apache.spark.mllib.linalg.Vectors
+val data = sc.textFile("../data/nyt.txt")
+val parsedData = data.map(s => Vectors.sparse(102661, s.split(" ").map(x=>(x.split(":")(0).toInt, x.split(":")(1).toDouble)).toList))
+var rdd = parsedData.repartition(9)
+time{for(it<-1 to 15){val clusters = KMeans.train(rdd, it*10, 2000, 'random')}}
+
+```
+
 
 
 
