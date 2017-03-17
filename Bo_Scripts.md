@@ -94,7 +94,7 @@ import org.apache.spark.mllib.linalg.Vectors
 val data = sc.textFile("../data/nyt.txt")
 var rdd = data.map(s => Vectors.sparse(102661, s.split(" ").map(x=>(x.split(":")(0).toInt, x.split(":")(1).toDouble)).toList))
 var rdd = rdd.repartition(6)
-time{val clusters = KMeans.train(rdd, it*10, 2000, "random")}
+time{val clusters = KMeans.train(rdd, 10, 2000, "random")}
 
 ```
 
