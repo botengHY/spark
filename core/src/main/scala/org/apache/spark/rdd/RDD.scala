@@ -139,6 +139,9 @@ abstract class RDD[T: ClassTag](
   /** Optionally overridden by subclasses to specify how they are partitioned. */
   @transient val partitioner: Option[Partitioner] = None
 
+
+  
+
   // =======================================================================
   // Methods and fields available on all RDDs
   // =======================================================================
@@ -419,10 +422,10 @@ abstract class RDD[T: ClassTag](
     coalesce(numPartitions, shuffle = true)
   }
 
-  def repartitionWithWeight(numPartitions: Int, locWeight: HashMap[String, Int])
+  def repartitionWithWeight(locWeight: HashMap[String, Int])
   (implicit ord: Ordering[T] = null): RDD[T] = withScope {
-    var sumWeight = locWeight.values.sum
-    coalesceWithWeight(sumWeight, locWeight)
+      var sumWeight = locWeight.values.sum
+      coalesceWithWeight(sumWeight, locWeight)
   }
   /**
    * Return a new RDD that is reduced into `numPartitions` partitions.

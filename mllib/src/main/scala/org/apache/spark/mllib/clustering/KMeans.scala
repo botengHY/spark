@@ -18,6 +18,7 @@
 package org.apache.spark.mllib.clustering
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 
 import org.apache.spark.annotation.Since
 import org.apache.spark.broadcast.Broadcast
@@ -262,23 +263,29 @@ class KMeans private (
     var converged = false
     var cost = 0.0
     var iteration = 0
+    var ephemeral = 0 
 
     val iterationStartTime = System.nanoTime()
 
     instr.foreach(_.logNumFeatures(centers.head.vector.size))
 
+    var rdd = data
+    var prevlocWeight = HashMap[String, Int]()
     // Execute iterations of Lloyd's algorithm until converged
     while (iteration < maxIterations && !converged) {
       val costAccum = sc.doubleAccumulator
       val bcCenters = sc.broadcast(centers)
+      val ip = java.net.InetAddress.getLocalHost().getHostName()
 
       // Find the sum and count of points mapping to each center
-      val totalContribs = data.mapPartitions { points =>
+      val totalContribs = rdd.mapPartitions { points =>
+        
+        val startTime = System.nanoTime()
         val thisCenters = bcCenters.value
         val dims = thisCenters.head.vector.size
 
-        val sums = Array.fill(thisCenters.length)(Vectors.zeros(dims))
-        val counts = Array.fill(thisCenters.length)(0L)
+        val sums = Array.fill(thisCenters.length+1)(Vectors.zeros(dims))
+        val counts = Array.fill(thisCenters.length+1)(0L)
 
         points.foreach { point =>
           val (bestCenter, cost) = KMeans.findClosest(thisCenters, point)
@@ -288,13 +295,32 @@ class KMeans private (
           counts(bestCenter) += 1
         }
 
-        counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j)))).iterator
+        val ret = counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j))))
+        val calculationTime = (System.nanoTime() - startTime)/10e6
+        ret.iterator
       }.reduceByKey { case ((sum1, count1), (sum2, count2)) =>
         axpy(1.0, sum2, sum1)
         (sum1, count1 + count2)
       }.collectAsMap()
 
-      bcCenters.destroy(blocking = false)
+      var ret = sc.getWeightMap(18, prevlocWeight, Array(1))
+      println("current duration is", ret._1)
+      println("new locWeight", ret._2)
+      println("prev locWeight", prevlocWeight)
+
+
+      var granularity = ret._2.maxBy(_._2)._2 - ret._2.minBy(_._2)._2
+
+      if(granularity > 1){
+        if(iteration - ephemeral == 1){
+          ephemeral = 0
+          prevlocWeight = ret._2
+          rdd = rdd.repartitionWithWeight(ret._2)
+        }
+        else{
+          ephemeral = iteration
+        }
+      }
 
       // Update the cluster centers and costs
       converged = true
@@ -306,6 +332,8 @@ class KMeans private (
         }
         centers(j) = newCenter
       }
+
+      bcCenters.destroy(blocking = false)
 
       cost = costAccum.value
       iteration += 1

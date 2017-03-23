@@ -536,7 +536,7 @@ private[spark] class TaskSchedulerImpl(
    * Cleans up the TaskScheduler's state for tracking the given task.
    */
   private def cleanupTaskState(tid: Long): Unit = {
-    taskIdToTaskSetManager.remove(tid)
+    //taskIdToTaskSetManager.remove(tid)
     taskIdToExecutorId.remove(tid).foreach { executorId =>
       executorIdToRunningTaskIds.get(executorId).foreach { _.remove(tid) }
     }

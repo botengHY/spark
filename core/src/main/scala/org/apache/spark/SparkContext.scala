@@ -216,6 +216,9 @@ class SparkContext(config: SparkConf) extends Logging {
   private var _files: Seq[String] = _
   private var _shutdownHookRef: AnyRef = _
 
+  // def getDagScheduler: DAGScheduler = _dagScheduler
+  // def getTaskScheduler: TaskScheduler = _taskScheduler
+
   /* ------------------------------------------------------------------------------------- *
    | Accessors and public fields. These provide access to the internal state of the        |
    | context.                                                                              |
@@ -358,18 +361,51 @@ class SparkContext(config: SparkConf) extends Logging {
     }
   }
 
-  def getNodeDuration(): HashMap[String, Long] = {
+  // def getNodeDuration(): HashMap[String, Long] = {
+  //   var tsi=_taskScheduler.asInstanceOf[TaskSchedulerImpl]
+  //   var maxTaskId=tsi.taskIdToTaskSetManager.keys.max
+  //   var taskInfos=tsi.taskIdToTaskSetManager(maxTaskId).taskInfos
+  //   var weightMap=HashMap[String,Long]()
+  //   for(tid <- taskInfos.keys){
+  //     var host = taskInfos(tid).host
+  //     var duration = taskInfos(tid).duration
+  //     var oldDuration = weightMap.getOrElse(host, 0:Long)
+  //     weightMap(host) = oldDuration + duration
+  //   }
+  //   weightMap
+  // }
+
+  def getWeightMap(granularity: Double, prevLocWeight: HashMap[String, Int], measureTasks: Array[Int]): (HashMap[String, Long], HashMap[String, Int]) = {
+    
+
     var tsi=_taskScheduler.asInstanceOf[TaskSchedulerImpl]
     var maxTaskId=tsi.taskIdToTaskSetManager.keys.max
-    var taskInfos=tsi.taskIdToTaskSetManager(maxTaskId).taskInfos
-    var weightMap=HashMap[String,Long]()
-    for(tid <- taskInfos.keys){
-      var host = taskInfos(tid).host
-      var duration = taskInfos(tid).duration
-      var oldDuration = weightMap.getOrElse(host, 0:Long)
-      weightMap(host) = oldDuration + duration
+    var taskSetSize=tsi.taskIdToTaskSetManager(maxTaskId).taskInfos.size
+    var durationMap=HashMap[String, Long]()
+    var weightMap = HashMap[String, Int]()
+    var sumInverse = 0.0
+
+    for(t <- measureTasks){
+      var taskInfos = tsi.taskIdToTaskSetManager(maxTaskId - t*taskSetSize).taskInfos
+      for(tid <- taskInfos.keys){
+        var host = taskInfos(tid).host
+        var taskInfo = taskInfos(tid)
+        var finishTime = if(taskInfo.gettingResultTime == 0) taskInfo.finishTime else taskInfo.gettingResultTime
+        var duration = finishTime - taskInfo.launchTime
+
+        println(host, duration)
+        sumInverse += 1.0/(duration/prevLocWeight.getOrElse(host, 1))
+        durationMap += (host->duration)
+        tsi.taskIdToTaskSetManager.remove(tid)
+      }
     }
-    weightMap
+    println("**************************************")
+    
+    for(a <- durationMap){
+      weightMap += (a._1->math.ceil(granularity/(a._2/prevLocWeight.getOrElse(a._1, 1))/sumInverse).toInt)
+    }
+
+    (durationMap, weightMap)
   }
 
   /** Control our logLevel. This overrides any user-defined log settings.

@@ -426,13 +426,11 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
 
   def coalesceWithWeight(prev: RDD[_], locWeight:HashMap[String, Int]): Array[PartitionGroup] = {
     val partitionLocs = new PartitionLocations(prev)
-
     // setup the groups (bins)
     setupWeightedGroups(locWeight)
-
     // assign partitions (balls) to each group (bins)
     fillGroups(prev, locWeight, partitionLocs)
-    
+    //get partitions
     getPartitions
   }
 
