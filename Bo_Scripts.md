@@ -1,3 +1,5 @@
+#Spark
+
 ### Build spark
 In pathToSpark/spark folder do 
 ```
@@ -18,3 +20,96 @@ $ var part = sc.textFile("two_diamonds_400.txt")
 $ part = part.repartitionWithWeight(4, locWeight)
 $ part.count()
 ```
+
+#AWS EC2
+
+### ec2 public dns
+```
+ec2-52-91-175-30.compute-1.amazonaws.com
+ec2-52-205-171-223.compute-1.amazonaws.com
+ec2-52-207-234-132.compute-1.amazonaws.com
+ec2-54-152-18-243.compute-1.amazonaws.com
+ec2-54-166-109-227.compute-1.amazonaws.com
+ec2-54-166-181-97.compute-1.amazonaws.com
+ec2-54-173-214-238.compute-1.amazonaws.com
+ec2-54-211-235-198.compute-1.amazonaws.com
+ec2-54-224-117-152.compute-1.amazonaws.com
+ec2-54-234-112-145.compute-1.amazonaws.com
+```
+### ssh to ec2 instances
+```
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-91-175-30.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-205-171-223.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-52-207-234-132.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-152-18-243.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-166-109-227.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-166-181-97.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-173-214-238.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-211-235-198.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-224-117-152.compute-1.amazonaws.com
+ssh -y -i ~/thesis/utilities/spark_ec2.pem ubuntu@ec2-54-234-112-145.compute-1.amazonaws.com
+```
+
+# Setting up EC2 Spark environment
+1. Install java following http://tipsonubuntu.com/2016/07/31/install-oracle-java-8-9-ubuntu-16-04-linux-mint-18/
+2. Install scala using 
+ ```
+ $sudo apt-get install scala
+ ```
+
+### Configure ec2 spark cluster 
+First pull from git and build. Configure spark ec2 cluster following http://blog.insightdatalabs.com/spark-cluster-step-by-step/
+
+### Start master using
+```
+~/spark/sbin/start-master.sh
+```
+
+### Start slave using
+```
+~/spark/sbin/start-slave.sh spark://ip-172-31-49-67.ec2.internal:7077
+```
+Where portnumber can be checked in master log file
+
+# Kmeans on spark cluster
+
+# Create sparce vector rdd
+```
+val parsedData = data.map(s => Vectors.sparse(102660, s.split(" ").map(x=>(x.split(":")(0).toInt, x.split(":")(1).toDouble)).toList))
+```
+
+
+# Run kmeans on ec2 cluster
+```
+def time[R](block: => R): R = {  
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    println("Elapsed time: " + (t1 - t0) + "ns")
+    result
+}
+
+import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
+import org.apache.spark.mllib.linalg.Vectors
+val data = sc.textFile("../data/nyt.txt")
+var rdd = data.map(s => Vectors.sparse(102661, s.split(" ").map(x=>(x.split(":")(0).toInt, x.split(":")(1).toDouble)).toList))
+rdd = rdd.repartition(6)
+time{val clusters = KMeans.train(rdd, 10, 2000, "random")}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
