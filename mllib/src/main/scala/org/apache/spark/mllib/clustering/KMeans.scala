@@ -308,7 +308,6 @@ class KMeans private (
       var durationRatio = ret._1.minBy(_._2)._2/ret._1.maxBy(_._2)._2 
 
       println("curr locWeight is ", ret._2)
-      println("granularity is: ", granularity)
       println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
