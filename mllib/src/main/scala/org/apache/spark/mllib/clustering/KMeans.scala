@@ -309,7 +309,7 @@ class KMeans private (
 
       println("curr locWeight is ", ret._2)
       println("durationMap is ", ret._1)
-      prtntln("durationRatio is ", durationRatio)
+      println("durationRatio is ", durationRatio)
       println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
