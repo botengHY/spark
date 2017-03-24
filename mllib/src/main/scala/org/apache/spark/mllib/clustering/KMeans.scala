@@ -303,17 +303,18 @@ class KMeans private (
         (sum1, count1 + count2)
       }.collectAsMap()
 
-      var ret = sc.getWeightMap(24, prevlocWeight, Array(1))
+      var ret = sc.getWeightMap(48, prevlocWeight, Array(1))
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
-      println("curr locWeight is ", ret._2)
-      println("durationMap is ", ret._1)
-      println("durationRatio is ", durationRatio)
-      println("prev locWeight is ", prevlocWeight)
+      // println("curr locWeight is ", ret._2)
+      // println("durationMap is ", ret._1)
+      // println("durationRatio is ", durationRatio)
+      // println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
-        if(iteration - ephemeral == 1){
+        ephemeral++
+        if(iteration - ephemeral == 4){
           println("****repartitionWithWeight")
           ephemeral = 0
           prevlocWeight = ret._2
