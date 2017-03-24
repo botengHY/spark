@@ -305,13 +305,13 @@ class KMeans private (
 
       var ret = sc.getWeightMap(24, prevlocWeight, Array(1))
 
-      var granularity = ret._2.maxBy(_._2)._2 - ret._2.minBy(_._2)._2
+      var durationRatio = ret._1.minBy(_._2)._2/ret._1.maxBy(_._2)._2 
 
       println("curr locWeight is ", ret._2)
       println("granularity is: ", granularity)
       println("prev locWeight is ", prevlocWeight)
 
-      if(granularity > 1){
+      if(durationRatio < 0.7){
         if(iteration - ephemeral == 1){
           ephemeral = 0
           prevlocWeight = ret._2
