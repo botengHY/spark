@@ -305,9 +305,11 @@ class KMeans private (
 
       var ret = sc.getWeightMap(24, prevlocWeight, Array(1))
 
-      var durationRatio = ret._1.minBy(_._2)._2/ret._1.maxBy(_._2)._2 
+      var durationRatio = (ret._1.minBy(_._2)._2)/(ret._1.maxBy(_._2)._2) 
 
       println("curr locWeight is ", ret._2)
+      println("durationMap is ", ret._1)
+      prtntln("durationRatio is ", durationRatio)
       println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
