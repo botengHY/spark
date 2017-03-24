@@ -402,7 +402,7 @@ class SparkContext(config: SparkConf) extends Logging {
     println("**************************************")
     
     for(a <- durationMap){
-      weightMap += (a._1->math.ceil(granularity/(a._2/prevLocWeight.getOrElse(a._1, 1))/sumInverse).toInt)
+      weightMap += (a._1->math.round(granularity/(a._2/prevLocWeight.getOrElse(a._1, 1))/sumInverse).toInt)
     }
 
     (durationMap, weightMap)
