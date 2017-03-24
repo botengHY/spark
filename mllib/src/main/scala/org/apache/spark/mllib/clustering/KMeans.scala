@@ -313,8 +313,7 @@ class KMeans private (
       // println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
-        ephemeral++
-        if(iteration - ephemeral == 4){
+        if(iteration - ephemeral == 1){
           println("****repartitionWithWeight")
           ephemeral = 0
           prevlocWeight = ret._2
