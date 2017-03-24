@@ -392,14 +392,11 @@ class SparkContext(config: SparkConf) extends Logging {
         var taskInfo = taskInfos(tid)
         var finishTime = if(taskInfo.gettingResultTime == 0) taskInfo.finishTime else taskInfo.gettingResultTime
         var duration = finishTime - taskInfo.launchTime
-
-        println(host, duration)
         sumInverse += 1.0/(duration/prevLocWeight.getOrElse(host, 1))
         durationMap += (host->duration)
         tsi.taskIdToTaskSetManager.remove(tid)
       }
     }
-    println("**************************************")
     
     for(a <- durationMap){
       weightMap += (a._1->math.round(granularity/(a._2/prevLocWeight.getOrElse(a._1, 1))/sumInverse).toInt)

@@ -303,11 +303,7 @@ class KMeans private (
         (sum1, count1 + count2)
       }.collectAsMap()
 
-      var ret = sc.getWeightMap(18, prevlocWeight, Array(1))
-      println("current duration is", ret._1)
-      println("new locWeight", ret._2)
-      println("prev locWeight", prevlocWeight)
-
+      var ret = sc.getWeightMap(24, prevlocWeight, Array(1))
 
       var granularity = ret._2.maxBy(_._2)._2 - ret._2.minBy(_._2)._2
 
