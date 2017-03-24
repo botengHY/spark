@@ -307,6 +307,10 @@ class KMeans private (
 
       var granularity = ret._2.maxBy(_._2)._2 - ret._2.minBy(_._2)._2
 
+      println("curr locWeight is ", ret._2)
+      println("granularity is: ", granularity)
+      println("prev locWeight is ", prevlocWeight)
+
       if(granularity > 1){
         if(iteration - ephemeral == 1){
           ephemeral = 0
