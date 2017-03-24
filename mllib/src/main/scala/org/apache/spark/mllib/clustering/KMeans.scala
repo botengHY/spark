@@ -307,10 +307,10 @@ class KMeans private (
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
-      // println("curr locWeight is ", ret._2)
-      // println("durationMap is ", ret._1)
-      // println("durationRatio is ", durationRatio)
-      // println("prev locWeight is ", prevlocWeight)
+      println("curr locWeight is ", ret._2)
+      println("durationMap is ", ret._1)
+      println("durationRatio is ", durationRatio)
+      println("prev locWeight is ", prevlocWeight)
 
       if(durationRatio < 0.7){
         if(iteration - ephemeral == 1){
