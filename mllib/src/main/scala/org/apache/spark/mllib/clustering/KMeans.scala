@@ -309,6 +309,7 @@ class KMeans private (
 
       if(durationRatio < 0.75){
         ephemeral += 1
+        println(durationRatio, ephemeral)
         if(iteration - ephemeral == 2){
           ephemeral = 0
           prevlocWeight = ret._2
