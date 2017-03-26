@@ -307,7 +307,7 @@ class KMeans private (
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
-      if(durationRatio < 0.7){
+      if(durationRatio < 0.75){
         println(ephemeral)
         if(ephemeral == 3){
           ephemeral = 0
@@ -321,7 +321,10 @@ class KMeans private (
           ephemeral += 1
         }
       }
-
+      else{
+        ephemeral = 0
+      }
+      
       // Update the cluster centers and costs
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
