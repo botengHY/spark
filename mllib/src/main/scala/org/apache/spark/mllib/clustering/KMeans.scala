@@ -309,11 +309,12 @@ class KMeans private (
 
       if(durationRatio < 0.7){
         println(ephemeral)
-        if(ephemeral == 2){
+        if(ephemeral == 3){
           ephemeral = 0
           prevlocWeight = ret._2
           rdd.unpersist(blocking = false)
           rdd = data.repartitionWithWeight(ret._2)
+          println("duration ration is ", durationRatio)
           println("repartitionWithWeight with @", ret._2)
         }
         else{
