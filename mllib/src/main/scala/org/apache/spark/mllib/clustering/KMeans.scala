@@ -236,12 +236,48 @@ class KMeans private (
     model
   }
 
+  def run1(data: RDD[Vector], ephemeralLimit:Int = 4, durationRatioLimit: Double = 0.8): KMeansModel = {
+    run1(data, None, ephemeralLimit, durationRatioLimit)
+  }
+
+  private[spark] def run1(
+      data: RDD[Vector],
+      instr: Option[Instrumentation[NewKMeans]], 
+      ephemeralLimit: Int,
+      durationRatioLimit:Double): KMeansModel = {
+
+    if (data.getStorageLevel == StorageLevel.NONE) {
+      logWarning("The input data is not directly cached, which may hurt performance if its"
+        + " parent RDDs are also uncached.")
+    }
+
+    // Compute squared norms and cache them.
+    val norms = data.map(Vectors.norm(_, 2.0))
+    norms.persist()
+    val zippedData = data.zip(norms).map { case (v, norm) =>
+      new VectorWithNorm(v, norm)
+    }
+    val model = runAlgorithm(zippedData, instr, ephemeralLimit, durationRatioLimit)
+    norms.unpersist()
+
+    // Warn at the end of the run as well, for increased visibility.
+    if (data.getStorageLevel == StorageLevel.NONE) {
+      logWarning("The input data was not directly cached, which may hurt performance if its"
+        + " parent RDDs are also uncached.")
+    }
+    model
+  }
+
+
+
   /**
    * Implementation of K-Means algorithm.
    */
   private def runAlgorithm(
       data: RDD[VectorWithNorm],
-      instr: Option[Instrumentation[NewKMeans]]): KMeansModel = {
+      instr: Option[Instrumentation[NewKMeans]], 
+      ephemeralLimit: Int = 4,
+      durationRatioLimit: Double = 0.8 ): KMeansModel = {
 
     val sc = data.sparkContext
 
@@ -271,6 +307,7 @@ class KMeans private (
 
     var rdd = data
     var prevlocWeight = HashMap[String, Int]()
+    var locWeight = HashMap[String, Int]()
     // Execute iterations of Lloyd's algorithm until converged
     while (iteration < maxIterations && !converged) {
       val costAccum = sc.doubleAccumulator
@@ -307,13 +344,16 @@ class KMeans private (
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
-      if(durationRatio < 0.8){
+      if(durationRatio < durationRatioLimit){
+        locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> (v + locWeight.getOrElse(k,0))/2 }
+        println("locWeight is ", locWeight)
         println(ephemeral)
-        if(ephemeral == 3){
+        if(ephemeral == ephemeralLimit){
           ephemeral = 0
-          prevlocWeight = ret._2
+          prevlocWeight = locWeight
+          locWeight = HashMap[String, Int]()
           rdd.unpersist(blocking = false)
-          rdd = data.repartitionWithWeight(ret._2)
+          rdd = data.repartitionWithWeight(locWeight)
           println("duration ration is ", durationRatio)
           println("repartitionWithWeight with @", ret._2)
         }
@@ -323,6 +363,7 @@ class KMeans private (
       }
       else{
         ephemeral = 0
+        locWeight = HashMap[String, Int]()
       }
 
       // Update the cluster centers and costs
@@ -489,11 +530,13 @@ object KMeans {
       data: RDD[Vector],
       k: Int,
       maxIterations: Int,
-      initializationMode: String): KMeansModel = {
+      initializationMode: String, 
+      ephemeralLimit: Int = 4, 
+      durationRatioLimit:Double = 0.8): KMeansModel = {
     new KMeans().setK(k)
       .setMaxIterations(maxIterations)
       .setInitializationMode(initializationMode)
-      .run(data)
+      .run1(data, ephemeralLimit, durationRatioLimit)
   }
 
   /**
