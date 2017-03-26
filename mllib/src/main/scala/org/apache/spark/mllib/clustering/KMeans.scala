@@ -345,11 +345,13 @@ class KMeans private (
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
       if(durationRatio < durationRatioLimit){
-        println(durationRatio)
-        locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> math.round((v + locWeight.getOrElse(k,0))/2) }
+        locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> math.round((v + locWeight.getOrElse(k,0))/2).toInt }
+
+        println(ephemeral)
         if(ephemeral == ephemeralLimit){
           ephemeral = 0
-          prevlocWeight = locWeight
+          prevlocWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
+          
           rdd.unpersist(blocking = false)
           rdd = data.repartitionWithWeight(locWeight)
           println("repartitionWithWeight with @", ret._2)
