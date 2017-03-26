@@ -307,8 +307,9 @@ class KMeans private (
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
-      if(durationRatio < 0.75){
-        if(iteration - ephemeral == 1){
+      if(durationRatio < 0.7){
+        println(ephemeral)
+        if(ephemeral == 2){
           ephemeral = 0
           prevlocWeight = ret._2
           rdd.unpersist(blocking = false)
@@ -316,7 +317,7 @@ class KMeans private (
           println("repartitionWithWeight with @", ret._2)
         }
         else{
-          ephemeral = iteration
+          ephemeral += 1
         }
       }
 
