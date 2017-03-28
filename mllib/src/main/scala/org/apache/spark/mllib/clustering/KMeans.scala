@@ -348,6 +348,7 @@ class KMeans private (
         locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> (v + locWeight.getOrElse(k,0)) }
         println(durationRatio, locWeight)
         ephemeral += 1
+        println(ephemeral, ephemeralLimit)
         if(ephemeral == ephemeralLimit){
           
 
@@ -361,9 +362,6 @@ class KMeans private (
           println("repartitionWithWeight with @", ret._2)
           locWeight = HashMap[String, Int]()
           ephemeral = 0
-        }
-        else{
-          ephemeral += 1
         }
       }
       else{
