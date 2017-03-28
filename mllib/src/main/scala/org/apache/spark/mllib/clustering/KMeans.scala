@@ -236,13 +236,14 @@ class KMeans private (
     model
   }
 
-  def run1(data: RDD[Vector], ephemeralLimit:Int = 4, durationRatioLimit: Double = 0.8): KMeansModel = {
-    run1(data, None, ephemeralLimit, durationRatioLimit)
+  def run1(data: RDD[Vector], partGranularity:Int=24, ephemeralLimit:Int = 4, durationRatioLimit: Double = 0.8): KMeansModel = {
+    run1(data, None, partGranularity, ephemeralLimit, durationRatioLimit)
   }
 
   private[spark] def run1(
       data: RDD[Vector],
-      instr: Option[Instrumentation[NewKMeans]], 
+      instr: Option[Instrumentation[NewKMeans]],
+      partGranularity: Int, 
       ephemeralLimit: Int,
       durationRatioLimit:Double): KMeansModel = {
 
@@ -257,7 +258,7 @@ class KMeans private (
     val zippedData = data.zip(norms).map { case (v, norm) =>
       new VectorWithNorm(v, norm)
     }
-    val model = runAlgorithm(zippedData, instr, ephemeralLimit, durationRatioLimit)
+    val model = runAlgorithm(zippedData, instr, partGranularity, ephemeralLimit, durationRatioLimit)
     norms.unpersist()
 
     // Warn at the end of the run as well, for increased visibility.
@@ -276,6 +277,7 @@ class KMeans private (
   private def runAlgorithm(
       data: RDD[VectorWithNorm],
       instr: Option[Instrumentation[NewKMeans]], 
+      partGranularity: Int = 24,
       ephemeralLimit: Int = 4,
       durationRatioLimit: Double = 0.8 ): KMeansModel = {
 
@@ -534,12 +536,13 @@ object KMeans {
       k: Int,
       maxIterations: Int,
       initializationMode: String, 
+      partGranularity: Int = 24,
       ephemeralLimit: Int = 4, 
       durationRatioLimit:Double = 0.8): KMeansModel = {
     new KMeans().setK(k)
       .setMaxIterations(maxIterations)
       .setInitializationMode(initializationMode)
-      .run1(data, ephemeralLimit, durationRatioLimit)
+      .run1(data, partGranularity, ephemeralLimit, durationRatioLimit)
   }
 
   /**
