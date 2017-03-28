@@ -54,7 +54,7 @@ class KMeans private (
    * initializationMode: "k-means||", initializationSteps: 2, epsilon: 1e-4, seed: random}.
    */
   @Since("0.8.0")
-  def this() = this(2, 20, KMeans.K_MEANS_PARALLEL, 2, 1e-4, Utils.random.nextLong())
+  def this() = this(2, 20, KMeans.K_MEANS_PARALLEL, 2, 1e-5, Utils.random.nextLong())
 
   /**
    * Number of clusters to create (k).
@@ -365,7 +365,6 @@ class KMeans private (
       // Update the cluster centers and costs
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
-        println(count)
         scal(1.0 / count, sum)
         val newCenter = new VectorWithNorm(sum)
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
