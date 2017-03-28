@@ -371,7 +371,10 @@ class KMeans private (
         scal(1.0 / count, sum)
         println("*****************************************************")
         println("iteration, maxIterations: ", iteration, maxIterations)
-        println("sum.sum, count: ", (sum.sum), count)
+        var total  = sum.toArray.sum
+        
+
+        println("sum.sum, count: ", total, count)
         println("epsilon is: ", epsilon)
         println("*****************************************************")
         val newCenter = new VectorWithNorm(sum)
