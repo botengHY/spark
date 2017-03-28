@@ -312,6 +312,7 @@ class KMeans private (
     var locWeight = HashMap[String, Int]()
     // Execute iterations of Lloyd's algorithm until converged
     while (iteration < maxIterations && !converged) {
+
       val costAccum = sc.doubleAccumulator
       val bcCenters = sc.broadcast(centers)
 
@@ -336,6 +337,8 @@ class KMeans private (
         axpy(1.0, sum2, sum1)
         (sum1, count1 + count2)
       }.collectAsMap()
+
+      bcCenters.destroy(blocking = false)
 
       var ret = sc.getWeightMap(partGranularity, prevlocWeight, Array(1))
 
@@ -366,6 +369,11 @@ class KMeans private (
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
         scal(1.0 / count, sum)
+        println("*****************************************************")
+        println("iteration, maxIterations: ", iteration, maxIterations)
+        println("sum.sum, count: ", sum.sum, count)
+        println("epsilon is: ", epsilon)
+        println("*****************************************************")
         val newCenter = new VectorWithNorm(sum)
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
           converged = false
@@ -373,7 +381,7 @@ class KMeans private (
         centers(j) = newCenter
       }
 
-      bcCenters.destroy(blocking = false)
+      
 
       cost = costAccum.value
       iteration += 1
