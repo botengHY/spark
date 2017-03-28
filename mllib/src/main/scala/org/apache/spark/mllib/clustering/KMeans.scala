@@ -316,7 +316,7 @@ class KMeans private (
       val bcCenters = sc.broadcast(centers)
 
       // Find the sum and count of points mapping to each center
-      val totalContribs = data.mapPartitions { points =>
+      val totalContribs = rdd.mapPartitions { points =>
         val thisCenters = bcCenters.value
         val dims = thisCenters.head.vector.size
 
@@ -350,8 +350,6 @@ class KMeans private (
           
 
           locWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
-          //println("prevlocWeight is", prevlocWeight)
-          //println("locWeight is", locWeight)
           prevlocWeight = locWeight
           
           rdd.unpersist()
@@ -360,7 +358,7 @@ class KMeans private (
           locWeight = HashMap[String, Int]()
           ephemeral = 0
         }
-      }epsilon
+      }
       else{
         ephemeral = 0
         locWeight = HashMap[String, Int]()
