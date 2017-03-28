@@ -340,6 +340,27 @@ class KMeans private (
 
       bcCenters.destroy(blocking = false)
 
+      
+
+      // Update the cluster centers and costs
+      converged = true
+      totalContribs.foreach { case (j, (sum, count)) =>
+        scal(1.0 / count, sum)
+        println("*****************************************************")
+        println("iteration, maxIterations: ", iteration, maxIterations)
+        var total  = sum.toArray.sum
+        
+
+        println("sum.sum, count: ", total, count)
+        println("epsilon is: ", epsilon)
+        println("*****************************************************")
+        val newCenter = new VectorWithNorm(sum)
+        if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
+          converged = false
+        }
+        centers(j) = newCenter
+      }
+
       var ret = sc.getWeightMap(partGranularity, prevlocWeight, Array(1))
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
@@ -364,27 +385,6 @@ class KMeans private (
         ephemeral = 0
         locWeight = HashMap[String, Int]()
       }
-
-      // Update the cluster centers and costs
-      converged = true
-      totalContribs.foreach { case (j, (sum, count)) =>
-        scal(1.0 / count, sum)
-        println("*****************************************************")
-        println("iteration, maxIterations: ", iteration, maxIterations)
-        var total  = sum.toArray.sum
-        
-
-        println("sum.sum, count: ", total, count)
-        println("epsilon is: ", epsilon)
-        println("*****************************************************")
-        val newCenter = new VectorWithNorm(sum)
-        if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
-          converged = false
-        }
-        centers(j) = newCenter
-      }
-
-      
 
       cost = costAccum.value
       iteration += 1
