@@ -343,9 +343,7 @@ class KMeans private (
 
       if(durationRatio < durationRatioLimit){
         locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> (v + locWeight.getOrElse(k,0)) }
-        println(durationRatio, locWeight)
         ephemeral += 1
-        println(ephemeral, ephemeralLimit)
         if(ephemeral == ephemeralLimit){
           
 
@@ -367,7 +365,7 @@ class KMeans private (
       // Update the cluster centers and costs
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
-        println(sum, count)
+        println(count)
         scal(1.0 / count, sum)
         val newCenter = new VectorWithNorm(sum)
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
