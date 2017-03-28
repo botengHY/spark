@@ -314,17 +314,14 @@ class KMeans private (
     while (iteration < maxIterations && !converged) {
       val costAccum = sc.doubleAccumulator
       val bcCenters = sc.broadcast(centers)
-      val ip = java.net.InetAddress.getLocalHost().getHostName()
 
       // Find the sum and count of points mapping to each center
-      val totalContribs = rdd.mapPartitions { points =>
-        
-        val startTime = System.nanoTime()
+      val totalContribs = data.mapPartitions { points =>
         val thisCenters = bcCenters.value
         val dims = thisCenters.head.vector.size
 
-        val sums = Array.fill(thisCenters.length+1)(Vectors.zeros(dims))
-        val counts = Array.fill(thisCenters.length+1)(0L)
+        val sums = Array.fill(thisCenters.length)(Vectors.zeros(dims))
+        val counts = Array.fill(thisCenters.length)(0L)
 
         points.foreach { point =>
           val (bestCenter, cost) = KMeans.findClosest(thisCenters, point)
@@ -334,15 +331,13 @@ class KMeans private (
           counts(bestCenter) += 1
         }
 
-        val ret = counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j))))
-        val calculationTime = (System.nanoTime() - startTime)/10e6
-        ret.iterator
+        counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j)))).iterator
       }.reduceByKey { case ((sum1, count1), (sum2, count2)) =>
         axpy(1.0, sum2, sum1)
         (sum1, count1 + count2)
       }.collectAsMap()
 
-      var ret = sc.getWeightMap(48, prevlocWeight, Array(1))
+      var ret = sc.getWeightMap(partGranularity, prevlocWeight, Array(1))
 
       var durationRatio = (ret._1.minBy(_._2)._2).toDouble/(ret._1.maxBy(_._2)._2).toDouble
 
@@ -355,17 +350,17 @@ class KMeans private (
           
 
           locWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
-          println("prevlocWeight is", prevlocWeight)
-          println("locWeight is", locWeight)
+          //println("prevlocWeight is", prevlocWeight)
+          //println("locWeight is", locWeight)
           prevlocWeight = locWeight
           
-          rdd.unpersist(blocking = false)
+          rdd.unpersist()
           rdd = data.repartitionWithWeight(locWeight)
           println("repartitionWithWeight with @", ret._2)
           locWeight = HashMap[String, Int]()
           ephemeral = 0
         }
-      }
+      }epsilon
       else{
         ephemeral = 0
         locWeight = HashMap[String, Int]()
@@ -374,6 +369,7 @@ class KMeans private (
       // Update the cluster centers and costs
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
+        println(sum, count)
         scal(1.0 / count, sum)
         val newCenter = new VectorWithNorm(sum)
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
