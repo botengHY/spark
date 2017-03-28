@@ -348,7 +348,8 @@ class KMeans private (
         locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> (v + locWeight.getOrElse(k,0)) }
         if(ephemeral == ephemeralLimit){
           ephemeral = 0
-          prevlocWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
+          locWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
+          prevlocWeight = locWeight
           
           rdd.unpersist(blocking = false)
           rdd = data.repartitionWithWeight(locWeight)
