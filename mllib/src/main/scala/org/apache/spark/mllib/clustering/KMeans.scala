@@ -346,15 +346,21 @@ class KMeans private (
 
       if(durationRatio < durationRatioLimit){
         locWeight = locWeight ++ ret._2.map{ case (k,v) => k -> (v + locWeight.getOrElse(k,0)) }
+        println(durationRatio, locWeight)
+        ephemeral += 1
         if(ephemeral == ephemeralLimit){
-          ephemeral = 0
+          
+
           locWeight = locWeight.map{ case (k,v) => k -> math.round(v.toDouble/ephemeral).toInt}
+          println("prevlocWeight is", prevlocWeight)
+          println("locWeight is", locWeight)
           prevlocWeight = locWeight
           
           rdd.unpersist(blocking = false)
           rdd = data.repartitionWithWeight(locWeight)
           println("repartitionWithWeight with @", ret._2)
           locWeight = HashMap[String, Int]()
+          ephemeral = 0
         }
         else{
           ephemeral += 1
