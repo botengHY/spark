@@ -340,20 +340,10 @@ class KMeans private (
 
       bcCenters.destroy(blocking = false)
 
-      
-
       // Update the cluster centers and costs
       converged = true
       totalContribs.foreach { case (j, (sum, count)) =>
         scal(1.0 / count, sum)
-        println("*****************************************************")
-        println("iteration, maxIterations: ", iteration, maxIterations)
-        var total  = sum.toArray.sum
-        
-
-        println("sum.sum, count: ", total, count)
-        println("epsilon is: ", epsilon)
-        println("*****************************************************")
         val newCenter = new VectorWithNorm(sum)
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
           converged = false
@@ -375,8 +365,8 @@ class KMeans private (
           prevlocWeight = locWeight
           
           rdd.unpersist()
+          println("repartitionWithWeight @", locWeight)
           rdd = data.repartitionWithWeight(locWeight)
-          println("repartitionWithWeight with @", ret._2)
           locWeight = HashMap[String, Int]()
           ephemeral = 0
         }
